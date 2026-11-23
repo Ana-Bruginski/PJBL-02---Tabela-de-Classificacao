@@ -7,9 +7,12 @@ module Classificacao
   , pontosLinha
   , saldo
   , aproveitamento
+  , classificacao
+  , ateRodada
   ) where
 
-import Data.List (foldl')
+import Data.List (foldl', sortBy)
+import Data.Ord (Down (..), comparing)
 import Tipos
 
 -- Pontuacao de cada resultado. Os numeros 3, 1 e 0 aparecem so aqui, todo o resto da camada deriva deles.
@@ -73,3 +76,23 @@ aproveitamento l
   | jogos l == 0 = 0
   | otherwise    = 100 * fromIntegral (pontosLinha l)
                        / fromIntegral (jogos l * pontos Vitoria)
+
+-- A tabela completa, ja ordenada pelos criterios do campeonato.
+classificacao :: [Partida] -> [Linha]
+classificacao ps = sortBy ordemDaTabela (map (linhaDoTime ps) (times ps))
+
+-- Os criterios de desempate em uma unica comparacao. O operador <> encadeia
+-- os Ordering: so passa para o criterio seguinte quando o anterior da EQ.
+-- Down inverte a ordem, porque mais pontos vem primeiro.
+-- Ultimo criterio: ordem alfabetica, para a tabela nunca ficar ambigua.
+ordemDaTabela :: Linha -> Linha -> Ordering
+ordemDaTabela a b =
+     comparing (Down . pontosLinha) a b
+  <> comparing (Down . vitorias)    a b
+  <> comparing (Down . saldo)       a b
+  <> comparing (Down . golsPro)     a b
+  <> comparing time                 a b
+
+-- So as partidas ate a rodada informada, para ver a tabela em qualquer momento do campeonato.
+ateRodada :: Int -> [Partida] -> [Partida]
+ateRodada n = filter ((<= n) . rodada)
