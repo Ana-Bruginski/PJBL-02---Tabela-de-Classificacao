@@ -4,6 +4,9 @@
 module Classificacao
   ( pontos
   , linhaDoTime
+  , pontosLinha
+  , saldo
+  , aproveitamento
   ) where
 
 import Data.List (foldl')
@@ -51,3 +54,22 @@ acumular t l p = case resultadoPara t p of
 -- a conta e feita a cada passo, sem deixar calculo pendente.
 linhaDoTime :: [Partida] -> Time -> Linha
 linhaDoTime ps t = foldl' (acumular t) (linhaVazia t) (filter (participou t) ps)
+
+-- Pontos ganhos pelo time, calculados a partir de pontos/1.
+pontosLinha :: Linha -> Int
+pontosLinha l = vitorias l * pontos Vitoria
+              + empates  l * pontos Empate
+              + derrotas l * pontos Derrota
+
+-- Saldo de gols: gols pro menos gols contra.
+saldo :: Linha -> Int
+saldo l = golsPro l - golsContra l
+
+-- Percentual dos pontos disputados que o time conquistou.
+-- fromIntegral faz a ponte entre Int e Double: (/) nao aceita Int, e div
+-- truncaria o resultado.
+aproveitamento :: Linha -> Double
+aproveitamento l
+  | jogos l == 0 = 0
+  | otherwise    = 100 * fromIntegral (pontosLinha l)
+                       / fromIntegral (jogos l * pontos Vitoria)
