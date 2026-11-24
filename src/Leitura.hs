@@ -1,6 +1,6 @@
 -- Camada 3: leitura do texto, validacao com Maybe/Either e formatacao.
 
--- Nenhuma funcao daqui lanca excecao: 
+-- Nenhuma funcao daqui lanca excecao:
 -- toda entrada invalida vira um Left com um Erro que diz onde esta o problema.
 -- A conversao de texto para numero usa readMaybe, e nao read, que quebraria em "dois" ou "2a".
 module Leitura
@@ -9,11 +9,14 @@ module Leitura
   , lerPartida
   , lerCampeonato
   , todosOsErros
+  , tabelaFormatada
+  , descreverErro
   ) where
 
 import Data.Char (isSpace)
 import Data.List (nub)
 import Text.Read (readMaybe)
+import Classificacao (pontosLinha, saldo)
 import Tipos
 
 -- Tipo soma com os motivos possiveis de falha.
@@ -115,3 +118,49 @@ todosOsErros texto = errosDeLinha ++ errosDeRodada
     partidasOk    = [ p | Right p <- resultados ]
     errosDeRodada = map (\(r, t) -> TimeRepetidoNaRodada r t)
                         (repeticoesNaRodada partidasOk)
+
+-- Mensagem em portugues para cada motivo de falha.
+descreverErro :: Erro -> String
+descreverErro (CamposInvalidos n l) =
+  "Linha " ++ show n ++ ": esperava 5 campos separados por ';', encontrei \""
+            ++ l ++ "\""
+descreverErro (NumeroInvalido n campo) =
+  "Linha " ++ show n ++ ": \"" ++ campo ++ "\" nao e um numero inteiro"
+descreverErro (PlacarNegativo n v) =
+  "Linha " ++ show n ++ ": placar negativo (" ++ show v ++ ")"
+descreverErro (MesmoTime n t) =
+  "Linha " ++ show n ++ ": " ++ t ++ " aparece como mandante e visitante"
+descreverErro (TimeRepetidoNaRodada r t) =
+  "Rodada " ++ show r ++ ": " ++ t ++ " joga mais de uma vez"
+
+-- Alinha um texto a direita de uma coluna de largura n.
+coluna :: Int -> String -> String
+coluna n s = replicate (n - length s) ' ' ++ s
+
+-- Alinha um texto a esquerda de uma coluna de largura n.
+colunaEsquerda :: Int -> String -> String
+colunaEsquerda n s = s ++ replicate (n - length s) ' '
+
+-- Saldo com sinal explicito, para +8 nao virar 8.
+comSinal :: Int -> String
+comSinal v
+  | v > 0     = '+' : show v
+  | otherwise = show v
+
+-- A tabela pronta para impressao, com posicao, time, pontos, jogos, vitorias, empates, derrotas e saldo de gols.
+tabelaFormatada :: [Linha] -> String
+tabelaFormatada ls = unlines (cabecalho : regua : corpo)
+  where
+    cabecalho = coluna 2 "#" ++ "  " ++ colunaEsquerda 12 "Time"
+             ++ coluna 4 "P"  ++ coluna 4 "J" ++ coluna 4 "V"
+             ++ coluna 4 "E"  ++ coluna 4 "D" ++ coluna 5 "SG"
+    regua     = replicate (length cabecalho) '-'
+    corpo     = zipWith linhaDaTabela [1 :: Int ..] ls
+    linhaDaTabela pos l =
+         coluna 2 (show pos) ++ "  " ++ colunaEsquerda 12 (time l)
+      ++ coluna 4 (show (pontosLinha l))
+      ++ coluna 4 (show (jogos l))
+      ++ coluna 4 (show (vitorias l))
+      ++ coluna 4 (show (empates l))
+      ++ coluna 4 (show (derrotas l))
+      ++ coluna 5 (comSinal (saldo l))
