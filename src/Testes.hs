@@ -110,3 +110,62 @@ main = do
     (mediaGols campeonato) (Just (44 / 15))
   testar "mediaGols de lista vazia devolve Nothing"
     (mediaGols []) Nothing
+
+  putStrLn ""
+  putStrLn "===== Camada 3: leitura e validacao ====="
+  testar "separar quebra a linha nos ponto e virgula"
+    (separar ';' "1;Coritiba;2;1;Athletico")
+    ["1", "Coritiba", "2", "1", "Athletico"]
+  testar "lerPartida de uma linha valida"
+    (lerPartida 1 "1;Coritiba;2;1;Athletico")
+    (Right (Partida 1 "Coritiba" 2 1 "Athletico"))
+  testar "lerPartida ignora espacos em volta dos campos"
+    (lerPartida 1 " 1 ; Coritiba ; 2 ; 1 ; Athletico ")
+    (Right (Partida 1 "Coritiba" 2 1 "Athletico"))
+  testar "lerCampeonato aceita a entrada valida"
+    (fmap length (lerCampeonato dadosCampeonato)) (Right 15)
+
+  putStrLn ""
+  putStrLn "--- um teste para cada construtor de Erro ---"
+  testar "CamposInvalidos: faltou o visitante"
+    (lerPartida 7 "1;Coritiba;2;1")
+    (Left (CamposInvalidos 7 "1;Coritiba;2;1"))
+  testar "NumeroInvalido: placar escrito por extenso"
+    (lerPartida 8 "1;Athletico;dois;0;Londrina")
+    (Left (NumeroInvalido 8 "dois"))
+  testar "PlacarNegativo: gols negativos"
+    (lerPartida 9 "1;Maringa;-1;2;Operario")
+    (Left (PlacarNegativo 9 (-1)))
+  testar "MesmoTime: time jogando contra si mesmo"
+    (lerPartida 10 "2;Parana;1;1;Parana")
+    (Left (MesmoTime 10 "Parana"))
+  testar "TimeRepetidoNaRodada: Coritiba duas vezes na rodada 3"
+    (lerCampeonato "3;Coritiba;1;0;Londrina\n3;Coritiba;2;2;Maringa\n")
+    (Left (TimeRepetidoNaRodada 3 "Coritiba"))
+
+  putStrLn ""
+  putStrLn "--- relatorio completo de erros ---"
+  testar "lerCampeonato para no primeiro erro"
+    (lerCampeonato dadosComErros)
+    (Left (CamposInvalidos 2 "1;Coritiba;2;1"))
+  testar "todosOsErros encontra os cinco problemas"
+    (todosOsErros dadosComErros)
+    [ CamposInvalidos 2 "1;Coritiba;2;1"
+    , NumeroInvalido 3 "dois"
+    , PlacarNegativo 4 (-1)
+    , MesmoTime 5 "Parana"
+    , TimeRepetidoNaRodada 3 "Coritiba"
+    ]
+  testar "a entrada valida nao gera nenhum erro"
+    (todosOsErros dadosCampeonato) []
+
+  putStrLn ""
+  putStrLn "--- casos de borda ---"
+  testar "campeonato vazio: classificacao vazia"
+    (classificacao []) []
+  testar "campeonato vazio: tabela so com cabecalho e regua"
+    (length (lines (tabelaFormatada []))) 2
+  testar "texto so com comentarios e linhas em branco"
+    (lerCampeonato "# nada aqui\n\n   \n") (Right [])
+  testar "a tabela final tem 6 times mais cabecalho e regua"
+    (length (lines (tabelaFormatada (classificacao campeonato)))) 8
