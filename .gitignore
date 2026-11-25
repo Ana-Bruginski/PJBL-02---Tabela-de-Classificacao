@@ -1,0 +1,11 @@
+# Artefatos de compilacao do GHC
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+
+# Executaveis
+classificacao
+classificacao.exe
+testes
+testes.exe
